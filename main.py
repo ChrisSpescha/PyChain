@@ -1,9 +1,7 @@
 from hashlib import sha256
 import json
 import time
-from flask import Flask, request
-import requests
-
+from flask import Flask, request, render_template
 app = Flask(__name__)
 
 
@@ -26,11 +24,13 @@ class Blockchain:
         self.chain = []
         self.create_genesis_block()
 
+    # Every chain needs the Gen-Block
     def create_genesis_block(self):
         genesis_block = Block(0, [], time.time(), "0")
         genesis_block.hash = genesis_block.compute_hash()
         self.chain.append(genesis_block)
 
+    # Grabbing last Block in Chain for grabbing previous hash
     @property
     def last_block(self):
         return self.chain[-1]
@@ -55,7 +55,6 @@ class Blockchain:
             computed_hash = block.compute_hash()
         return computed_hash
 
-
     def is_valid_proof(self, block, block_hash):
         return (block_hash.startswith('0' * Blockchain.difficulty) and
                 block_hash == block.compute_hash())
@@ -64,9 +63,8 @@ class Blockchain:
         self.unconfirmed_transactions.append(transaction)
 
     def mine(self):
-        if not self.unconfirmed_transactions:
-            return False
-
+        # if not self.unconfirmed_transactions:
+        #     return False
         last_block = self.last_block
 
         new_block = Block(index=last_block.index + 1,
@@ -83,13 +81,17 @@ class Blockchain:
 blockchain = Blockchain()
 
 
-@app.route('/chain', methods=['GET'])
+@app.route('/', methods=['GET', 'POST'])
 def get_chain():
     chain_data = []
     for block in blockchain.chain:
         chain_data.append(block.__dict__)
-    return json.dumps({"length": len(chain_data),
-                       "chain": chain_data})
+    # return json.dumps({"length": len(chain_data),
+    #                    "chain": chain_data})
+    if request.method == "POST":
+        blockchain.mine()
+    print(chain_data)
+    return render_template('index.html', blockchain=chain_data)
 
 
 app.run(debug=True, port=5000)
